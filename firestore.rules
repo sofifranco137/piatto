@@ -1,0 +1,44 @@
+rules_version = '2';
+
+// Reglas de Cloud Firestore para Piatto.
+// Cada persona entra de forma anónima y solo puede leer y escribir SUS datos,
+// que viven en users/{su uid}/... Todo lo demás queda bloqueado.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function validRecipe(d) {
+      return d.name is string && d.name.size() >= 3 && d.name.size() <= 80
+        && d.minutes is int && d.minutes > 0 && d.minutes <= 1440
+        && d.ingredients is list && d.ingredients.size() >= 2 && d.ingredients.size() <= 60
+        && d.steps is list && d.steps.size() <= 60;
+    }
+
+    function validPantryItem(d) {
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 60;
+    }
+
+    function validListItem(d) {
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 60
+        && d.checked is bool;
+    }
+
+    match /users/{userId}/recipes/{id} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) && validRecipe(request.resource.data);
+    }
+
+    match /users/{userId}/pantry/{id} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) && validPantryItem(request.resource.data);
+    }
+
+    match /users/{userId}/shopping/{id} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) && validListItem(request.resource.data);
+    }
+  }
+}
