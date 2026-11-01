@@ -2,7 +2,7 @@ import { useState } from 'react';
 import AsyncButton from './AsyncButton';
 import { useToast } from './Toasts';
 import { friendlyError } from '../lib/errors';
-import { cap, fmtAmount, hasIn, parseIng } from '../lib/ingredients';
+import { cap, fmtAmount, hasIn, parseIng, sectionOf, SECTION_ORDER } from '../lib/ingredients';
 
 function ShoppingList({ list, loading, onAdd, onToggle, onDelete, onMoveBought, onClear }) {
   const toast = useToast();
@@ -10,6 +10,7 @@ function ShoppingList({ list, loading, onAdd, onToggle, onDelete, onMoveBought, 
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [busy, setBusy] = useState(null); // id del ítem que se está guardando
+  const [groupBy, setGroupBy] = useState('section'); // 'section' | 'recipe'
 
   async function submit(e) {
     e.preventDefault();
@@ -33,12 +34,14 @@ function ShoppingList({ list, loading, onAdd, onToggle, onDelete, onMoveBought, 
     try { await onToggle(item); } catch (err) { toast(friendlyError(err), 'error'); } finally { setBusy(null); }
   }
 
-  // Agrupa por receta de origen
+  // Agrupa por sección del súper (en el orden en que se recorre) o por receta de origen
   const groups = new Map();
   list.forEach((it) => {
-    const key = it.from || 'Agregado a mano';
+    const key = groupBy === 'section' ? sectionOf(it.name) : (it.from || 'Agregado a mano');
     groups.set(key, [...(groups.get(key) || []), it]);
   });
+  const entries = [...groups.entries()];
+  if (groupBy === 'section') entries.sort((a, b) => SECTION_ORDER.indexOf(a[0]) - SECTION_ORDER.indexOf(b[0]));
   const bought = list.filter((i) => i.checked);
 
   return (
@@ -51,14 +54,20 @@ function ShoppingList({ list, loading, onAdd, onToggle, onDelete, onMoveBought, 
             <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? <span className="spinner" /> : 'Agregar'}</button>
           </form>
           <p className="field-error" role="alert">{error}</p>
+          {list.length > 0 && (
+            <div className="seg" role="group" aria-label="Agrupar la lista">
+              <button type="button" aria-pressed={groupBy === 'section'} onClick={() => setGroupBy('section')}>Por sección</button>
+              <button type="button" aria-pressed={groupBy === 'recipe'} onClick={() => setGroupBy('recipe')}>Por receta</button>
+            </div>
+          )}
         </div>
 
         <ul className="shop-list">
           {loading && <li className="muted">Cargando la lista…</li>}
           {!loading && !list.length && (
-            <li className="empty"><strong>La lista está vacía</strong>Sumá los faltantes desde una receta o agregá algo a mano.</li>
+            <li className="empty"><strong>La lista está vacía</strong>Sumá los faltantes desde una receta, armá la lista de la semana o agregá algo a mano.</li>
           )}
-          {[...groups.entries()].map(([group, items]) => [
+          {entries.map(([group, items]) => [
             <li key={`g-${group}`} className="shop-group">{group}</li>,
             ...items.map((it) => (
               <li key={it.id} className="shop-item">
@@ -69,9 +78,10 @@ function ShoppingList({ list, loading, onAdd, onToggle, onDelete, onMoveBought, 
                       <span className="name">{cap(it.name)}</span>
                       {fmtAmount(it) && <span className="qty">{fmtAmount(it)}</span>}
                     </span>
+                    {groupBy === 'section' && it.from && <span className="sub">{it.from}</span>}
                   </span>
                 </label>
-                <AsyncButton className="icon-btn del" aria-label={`Quitar ${it.name}`} onClick={async () => { await onDelete([it.id]); toast(`Sacaste ${it.name} de la lista.`); }}>✕</AsyncButton>
+                <AsyncButton className="icon-btn del" aria-label={`Quitar ${it.name}`} onClick={() => onDelete(it)}>✕</AsyncButton>
               </li>
             )),
           ])}

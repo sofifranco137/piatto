@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // Reglas de Cloud Firestore para Piatto.
-// Cada persona entra de forma anónima y solo puede leer y escribir SUS datos,
+// Cada persona inicia sesión con su cuenta y solo puede leer y escribir SUS datos,
 // que viven en users/{su uid}/... Todo lo demás queda bloqueado.
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -39,6 +39,12 @@ service cloud.firestore {
     match /users/{userId}/shopping/{id} {
       allow read, delete: if isOwner(userId);
       allow create, update: if isOwner(userId) && validListItem(request.resource.data);
+    }
+
+    // Plan de la semana: un solo documento con un mapa { lun: [ids], mar: [...], ... }
+    match /users/{userId}/plan/{id} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) && request.resource.data.days is map;
     }
   }
 }

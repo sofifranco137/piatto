@@ -1,7 +1,7 @@
 import AsyncButton from './AsyncButton';
 import { matchOf, plural, tagColor, hasIn } from '../lib/ingredients';
 
-function RecipeCard({ recipe, pantry, onOpen, onAddMissing }) {
+function RecipeCard({ recipe, pantry, onOpen, onCook, onAddMissing }) {
   const m = matchOf(recipe, pantry);
   const extra = recipe.ingredients.length - 6;
 
@@ -25,8 +25,10 @@ function RecipeCard({ recipe, pantry, onOpen, onAddMissing }) {
             <span className="meter-bar"><span style={{ width: `${m.pct}%` }} /></span>
             Tenés {m.owned.length} de {recipe.ingredients.length}
           </span>
+          {recipe.cooked > 0 && <span className="recipe-cooked">La cocinaste {plural(recipe.cooked, 'vez', 'veces')}</span>}
         </button>
         <div className="recipe-actions">
+          <button className="btn btn-small btn-cook" type="button" onClick={() => onCook(recipe.id)}>A cocinar</button>
           {m.missing.length
             ? <AsyncButton className="link-btn" pendingLabel="Sumando…" onClick={() => onAddMissing(recipe)}>Sumar a la lista</AsyncButton>
             : <span className="ready">Tenés todo</span>}

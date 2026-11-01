@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Modal from './Modal';
 import { useToast } from './Toasts';
 import { friendlyError } from '../lib/errors';
-import { fmtIng, norm, parseIng } from '../lib/ingredients';
+import { cleanStep, fmtIng, norm, parseIng } from '../lib/ingredients';
 
 // Formulario para crear o editar una receta (agregar / modificar en Firestore)
 function RecipeForm({ open, recipe, onClose, onSave }) {
@@ -61,7 +61,7 @@ function FormBody({ recipe, onClose, onSave }) {
         minutes: Math.round(+minutes),
         servings: servings ? Math.round(+servings) : null,
         ingredients: finalIngs,
-        steps: steps.split('\n').map((s) => s.trim()).filter(Boolean),
+        steps: steps.split('\n').map(cleanStep).filter(Boolean), // "1. Batir" se guarda como "Batir"
       });
       toast(recipe ? `Guardaste los cambios en “${name.trim()}”.` : `Guardaste “${name.trim()}” en tu recetario.`);
       onClose();
@@ -111,7 +111,7 @@ function FormBody({ recipe, onClose, onSave }) {
       </div>
 
       <label className="field"><span>Pasos <span className="optional">(opcional)</span></span>
-        <textarea rows="4" value={steps} onChange={(e) => setSteps(e.target.value)} placeholder="Un paso por línea" />
+        <textarea rows="4" value={steps} onChange={(e) => setSteps(e.target.value)} placeholder="Un paso por línea. Si escribís “20 minutos”, el modo cocina te ofrece un temporizador." />
       </label>
 
       <div className="sheet-foot">

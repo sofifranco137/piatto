@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fmtIng, plural, tagColor } from '../lib/ingredients';
+import { cleanStep, fmtIng, plural, tagColor } from '../lib/ingredients';
 
 const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -44,7 +44,7 @@ function Book({ recipes }) {
               <div className="face back">
                 <span className="page-title">Preparación</span>
                 <ol className="page-steps">
-                  {(r.steps || []).slice(0, 3).map((s) => <li key={s}>{s}</li>)}
+                  {(r.steps || []).slice(0, 3).map((s) => <li key={s}>{cleanStep(s)}</li>)}
                 </ol>
                 <span className="plate" />
               </div>

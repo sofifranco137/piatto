@@ -1,22 +1,31 @@
 /* =========================================================
    Todas las operaciones con Cloud Firestore.
    Cada usuario tiene sus datos en:
-     users/{uid}/recipes/{id}   → recetas
-     users/{uid}/pantry/{id}    → lo que hay en la alacena
-     users/{uid}/shopping/{id}  → la lista del súper
+     users/{uid}/recipes/{id}    → recetas
+     users/{uid}/pantry/{id}     → lo que hay en la alacena
+     users/{uid}/shopping/{id}   → la lista del súper
+     users/{uid}/plan/semana     → qué receta va cada día
 
-   CONSULTAR  → subscribe()        (onSnapshot: lee y escucha cambios)
+   CONSULTAR  → subscribe(), subscribePlan()   (onSnapshot: lee y escucha cambios)
    AGREGAR    → addRecipe(), addPantryItems(), addListItems()
-   MODIFICAR  → updateRecipe(), setListItemChecked()
+   MODIFICAR  → updateRecipe(), setListItemChecked(), savePlan()
    ELIMINAR   → deleteRecipe(), deletePantryItem(), deleteListItems()
    ========================================================= */
 import {
-  addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, updateDoc, writeBatch,
+  addDoc, collection, deleteDoc, doc, increment, onSnapshot, orderBy, query, setDoc, updateDoc, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const col = (uid, name) => collection(db, 'users', uid, name);
 const ref = (uid, name, id) => doc(db, 'users', uid, name, id);
+const listItem = (item, createdAt) => ({
+  name: item.name,
+  qty: item.qty ?? null,
+  unit: item.unit ?? '',
+  from: item.from ?? null,
+  checked: false,
+  createdAt,
+});
 
 /* ---------- Consultar ---------- */
 // Lee una colección y vuelve a llamar a onData cada vez que cambia algo en la base.
@@ -54,18 +63,17 @@ export function deletePantryItem(uid, id) {
   return deleteDoc(ref(uid, 'pantry', id));
 }
 
+export function deletePantryItems(uid, ids) {
+  const batch = writeBatch(db);
+  ids.forEach((id) => batch.delete(ref(uid, 'pantry', id)));
+  return batch.commit();
+}
+
 /* ---------- Lista del súper ---------- */
 export function addListItems(uid, items) {
   const batch = writeBatch(db);
   const now = Date.now();
-  items.forEach((item, i) => batch.set(doc(col(uid, 'shopping')), {
-    name: item.name,
-    qty: item.qty ?? null,
-    unit: item.unit ?? '',
-    from: item.from ?? null,
-    checked: false,
-    createdAt: now + i,
-  }));
+  items.forEach((item, i) => batch.set(doc(col(uid, 'shopping')), listItem(item, now + i)));
   return batch.commit();
 }
 
@@ -80,13 +88,49 @@ export function deleteListItems(uid, ids) {
   return batch.commit();
 }
 
-// Lo comprado pasa a la alacena y sale de la lista, en una sola operación
-export function moveBoughtToPantry(uid, boughtIds, namesForPantry) {
+// Lo comprado pasa a la alacena y sale de la lista, en una sola operación.
+// Devuelve los ids nuevos de la alacena para poder deshacerlo.
+export async function moveBoughtToPantry(uid, boughtIds, namesForPantry) {
   const batch = writeBatch(db);
   const now = Date.now();
-  namesForPantry.forEach((name, i) => batch.set(doc(col(uid, 'pantry')), { name, createdAt: now + i }));
+  const newIds = namesForPantry.map((name, i) => {
+    const r = doc(col(uid, 'pantry'));
+    batch.set(r, { name, createdAt: now + i });
+    return r.id;
+  });
   boughtIds.forEach((id) => batch.delete(ref(uid, 'shopping', id)));
+  await batch.commit();
+  return newIds;
+}
+
+/* ---------- Deshacer ---------- */
+// Vuelve a escribir documentos que se borraron, con el mismo id y los mismos datos
+export function restoreDocs(uid, name, docs) {
+  const batch = writeBatch(db);
+  docs.forEach(({ id, ...data }) => batch.set(ref(uid, name, id), data));
   return batch.commit();
+}
+
+/* ---------- Modo cocina ---------- */
+// Al terminar de cocinar: saca de la alacena lo que se terminó, lo suma a la lista
+// y cuenta una vez más la receta. Todo junto, en una sola operación.
+export function finishCooking(uid, recipeId, pantryIdsToRemove, itemsForList) {
+  const batch = writeBatch(db);
+  const now = Date.now();
+  pantryIdsToRemove.forEach((id) => batch.delete(ref(uid, 'pantry', id)));
+  itemsForList.forEach((item, i) => batch.set(doc(col(uid, 'shopping')), listItem(item, now + i)));
+  batch.update(ref(uid, 'recipes', recipeId), { cooked: increment(1) });
+  return batch.commit();
+}
+
+/* ---------- Plan de la semana ---------- */
+// Un solo documento con un mapa: { lun: [idsDeRecetas], mar: [...], ... }
+export function subscribePlan(uid, onData, onError) {
+  return onSnapshot(ref(uid, 'plan', 'semana'), (snap) => onData(snap.exists() ? snap.data().days || {} : {}), onError);
+}
+
+export function savePlan(uid, days) {
+  return setDoc(ref(uid, 'plan', 'semana'), { days, updatedAt: Date.now() });
 }
 
 /* ---------- Datos de ejemplo (para la primera vez) ---------- */
@@ -95,8 +139,6 @@ export function loadExamples(uid, { recipes, pantry, list }) {
   const now = Date.now();
   recipes.forEach((r, i) => batch.set(doc(col(uid, 'recipes')), { ...r, cooked: 0, createdAt: now - i }));
   pantry.forEach((name, i) => batch.set(doc(col(uid, 'pantry')), { name, createdAt: now + i }));
-  list.forEach((item, i) => batch.set(doc(col(uid, 'shopping')), {
-    qty: null, unit: '', from: null, checked: false, ...item, createdAt: now + i,
-  }));
+  list.forEach((item, i) => batch.set(doc(col(uid, 'shopping')), listItem(item, now + i)));
   return batch.commit();
 }

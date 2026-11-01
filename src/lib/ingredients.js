@@ -43,8 +43,33 @@ export function fmtQty(q) {
   return (w ? String(w) : '') + f;
 }
 
-export const fmtAmount = (i) => [fmtQty(i.qty), i.unit].filter(Boolean).join(' ');
-export const fmtIng = (i) => [fmtAmount(i), i.name].filter(Boolean).join(' ');
+// f es el factor de porciones: si la receta es para 4 y cocinás para 2, f = 0.5
+export const fmtAmount = (i, f = 1) => [fmtQty(i.qty != null ? i.qty * f : null), i.unit].filter(Boolean).join(' ');
+export const fmtIng = (i, f = 1) => [fmtAmount(i, f), i.name].filter(Boolean).join(' ');
+export const factor = (recipe, servings) => (recipe.servings ? servings / recipe.servings : 1);
+
+// Saca la numeración que alguien haya escrito a mano: "1. Batir" → "Batir"
+// (la app ya numera los pasos sola)
+export const cleanStep = (s) => String(s).replace(/^\s*(paso\s*)?\d+\s*[.):\-]\s*/i, '').trim();
+
+// Secciones del súper, en el orden en que se recorre
+export const SECTIONS = [
+  ['Verdulería', ['papa', 'cebolla', 'cebolla morada', 'ajo', 'tomate', 'zanahoria', 'morrón', 'albahaca', 'limón', 'pepino', 'lechuga', 'perejil', 'zapallo', 'batata', 'manzana', 'banana', 'naranja', 'palta', 'espinaca', 'acelga', 'choclo', 'zucchini', 'berenjena', 'puerro', 'verdeo', 'rúcula']],
+  ['Carnicería y fiambrería', ['chorizo', 'carne', 'carne picada', 'pollo', 'cerdo', 'jamón', 'panceta', 'salame', 'milanesa', 'pescado', 'bondiola', 'nalga']],
+  ['Lácteos y huevos', ['leche', 'huevo', 'manteca', 'queso', 'queso rallado', 'crema', 'yogur', 'dulce de leche', 'ricota', 'mozzarella']],
+  ['Panadería', ['pan', 'pan rallado', 'tapas de empanada', 'prepizza', 'tortillas']],
+  ['Almacén', ['harina', 'fideos', 'arroz', 'lentejas', 'garbanzos', 'porotos', 'aceite', 'sal', 'azúcar', 'pimentón', 'tomate triturado', 'puré de tomate', 'nueces', 'yerba', 'café', 'polenta', 'orégano', 'pimienta', 'vinagre', 'caldo', 'levadura', 'atún', 'mayonesa', 'aceitunas']],
+  ['Bebidas', ['agua', 'gaseosa', 'cerveza', 'vino', 'jugo', 'soda']],
+  ['Varios', ['hielo', 'servilletas', 'vasos', 'carbón']],
+];
+export const SECTION_ORDER = [...SECTIONS.map((s) => s[0]), 'Otros'];
+
+export function sectionOf(name) {
+  const n = norm(name);
+  for (const [s, list] of SECTIONS) if (list.some((x) => norm(x) === n)) return s;
+  for (const [s, list] of SECTIONS) if (list.some((x) => n.includes(norm(x)))) return s;
+  return 'Otros';
+}
 
 export const hasIn = (list, name) => list.some((x) => norm(x.name) === norm(name));
 

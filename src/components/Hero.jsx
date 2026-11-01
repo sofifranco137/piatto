@@ -3,7 +3,7 @@ import Book from './Book';
 import { useBookTilt } from '../hooks/useBookTilt';
 import logo from '../assets/logo-piatto-claro.png';
 
-const LINKS = [['recetas', 'Recetas'], ['alacena', 'Mi alacena'], ['lista', 'Lista del súper']];
+const LINKS = [['recetas', 'Recetas'], ['semana', 'Mi semana'], ['alacena', 'Mi alacena'], ['lista', 'Lista del súper']];
 
 // Banner de la app con el recetario 3D, el menú y el nombre de quien inició sesión
 function Hero({ recipes, user, onGo, onNewRecipe, onSignOut }) {

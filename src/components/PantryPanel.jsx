@@ -4,7 +4,7 @@ import { useToast } from './Toasts';
 import { friendlyError } from '../lib/errors';
 import { hasIn, matchOf } from '../lib/ingredients';
 
-function PantryPanel({ pantry, recipes, loading, onAdd, onRemove, onOpen, onAddMissing }) {
+function PantryPanel({ pantry, recipes, loading, onAdd, onRemove, onOpen, onCook, onAddMissing }) {
   const toast = useToast();
   const [value, setValue] = useState('');
   const [error, setError] = useState('');
@@ -86,6 +86,7 @@ function PantryPanel({ pantry, recipes, loading, onAdd, onRemove, onOpen, onAddM
                     )}
                   </div>
                   <div className="match-actions">
+                    <button className="btn btn-small btn-cook" type="button" onClick={() => onCook(x.r.id)}>A cocinar</button>
                     <button className="link-btn" type="button" onClick={() => onOpen(x.r.id)}>Ver receta</button>
                     {x.missing.length > 0 && <AsyncButton className="link-btn" pendingLabel="Sumando…" onClick={() => onAddMissing(x.r)}>Sumar a la lista</AsyncButton>}
                   </div>

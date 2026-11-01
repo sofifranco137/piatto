@@ -3,7 +3,7 @@ import RecipeCard from './RecipeCard';
 import AsyncButton from './AsyncButton';
 import { norm } from '../lib/ingredients';
 
-function RecipesPanel({ recipes, pantry, loading, onOpen, onNew, onAddMissing, onLoadExamples }) {
+function RecipesPanel({ recipes, pantry, loading, onOpen, onNew, onCook, onAddMissing, onLoadExamples }) {
   const [query, setQuery] = useState('');
   const q = norm(query);
   const shown = recipes.filter((r) => !q || norm(r.name).includes(q) || r.ingredients.some((i) => norm(i.name).includes(q)));
@@ -25,7 +25,7 @@ function RecipesPanel({ recipes, pantry, loading, onOpen, onNew, onAddMissing, o
   } else if (!shown.length) {
     content = <div className="empty"><strong>Nada con “{query}”</strong>Probá con otro nombre o ingrediente.</div>;
   } else {
-    content = shown.map((r) => <RecipeCard key={r.id} recipe={r} pantry={pantry} onOpen={onOpen} onAddMissing={onAddMissing} />);
+    content = shown.map((r) => <RecipeCard key={r.id} recipe={r} pantry={pantry} onOpen={onOpen} onCook={onCook} onAddMissing={onAddMissing} />);
   }
 
   return (
@@ -33,7 +33,7 @@ function RecipesPanel({ recipes, pantry, loading, onOpen, onNew, onAddMissing, o
       <div className="panel-head">
         <div>
           <h2>Tus recetas</h2>
-          <p className="muted">Tocá una receta para ver qué te falta.</p>
+          <p className="muted">Tocá una receta para ver qué te falta o ajustar las porciones.</p>
         </div>
         <div className="panel-tools">
           <label className="search">
