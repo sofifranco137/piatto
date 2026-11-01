@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://piatto-ruddy.vercel.app/sitemap.xml

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import AsyncButton from './AsyncButton';
 import { useToast } from './Toasts';
 import { friendlyError } from '../lib/errors';
-import { hasIn, matchOf } from '../lib/ingredients';
+import { hasIn, matchOf, inPantry } from '../lib/ingredients';
 
 function PantryPanel({ pantry, recipes, loading, onAdd, onRemove, onOpen, onCook, onAddMissing }) {
   const toast = useToast();
@@ -28,7 +28,7 @@ function PantryPanel({ pantry, recipes, loading, onAdd, onRemove, onOpen, onCook
     }
   }
 
-  const suggestions = [...new Set(recipes.flatMap((r) => r.ingredients.map((i) => i.name)).filter((n) => !hasIn(pantry, n)))].slice(0, 10);
+  const suggestions = [...new Set(recipes.flatMap((r) => r.ingredients.map((i) => i.name)).filter((n) => !inPantry(pantry, n)))].slice(0, 10);
   const ranked = recipes.map((r) => ({ r, ...matchOf(r, pantry) }))
     .sort((a, b) => b.pct - a.pct || a.missing.length - b.missing.length);
 

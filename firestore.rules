@@ -2,7 +2,8 @@ rules_version = '2';
 
 // Reglas de Cloud Firestore para Piatto.
 // Cada persona inicia sesión con su cuenta y solo puede leer y escribir SUS datos,
-// que viven en users/{su uid}/... Todo lo demás queda bloqueado.
+// que viven en users/{su uid}/... Las listas compartidas viven en lists/{grupoId}
+// y solo las usan los miembros de cada grupo. Todo lo demás queda bloqueado.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -45,6 +46,77 @@ service cloud.firestore {
     match /users/{userId}/plan/{id} {
       allow read, delete: if isOwner(userId);
       allow create, update: if isOwner(userId) && request.resource.data.days is map;
+    }
+
+    /* ---------- Grupos: listas compartidas ---------- */
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function validGroup(d) {
+      return d.name is string && d.name.size() >= 3 && d.name.size() <= 60
+        && d.owner is string && d.members is list && d.members.size() <= 30
+        && d.names is map;
+    }
+
+    function validGroupItem(d) {
+      return d.name is string && d.name.size() > 0 && d.name.size() <= 60
+        && d.checked is bool
+        && (d.assignee == null || d.assignee is string);
+    }
+
+    function onlyMembersChange() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'names']);
+    }
+
+    match /lists/{listId} {
+      // Leer un grupo puntual: cualquiera con sesión que tenga el link (el id no se puede adivinar)
+      allow get: if signedIn();
+      // Listar grupos: solo aquellos de los que soy miembro
+      allow list: if signedIn() && request.auth.uid in resource.data.members;
+      // Crear: quien lo crea queda como dueño y único miembro
+      allow create: if signedIn() && validGroup(request.resource.data)
+        && request.resource.data.owner == request.auth.uid
+        && request.resource.data.members.size() == 1
+        && request.auth.uid in request.resource.data.members;
+      allow update: if signedIn() && validGroup(request.resource.data)
+        && request.resource.data.owner == resource.data.owner
+        && (
+          // Quien lo creó puede renombrarlo y sacar personas (pero no sacarse a sí mismo)
+          (resource.data.owner == request.auth.uid && request.auth.uid in request.resource.data.members)
+          // Sumarse con el link: solo se puede agregar el propio uid
+          || (onlyMembersChange()
+              && !(request.auth.uid in resource.data.members)
+              && request.auth.uid in request.resource.data.members
+              && request.resource.data.members.hasAll(resource.data.members)
+              && request.resource.data.members.size() == resource.data.members.size() + 1)
+          // Salir: un miembro solo puede sacarse a sí mismo
+          || (onlyMembersChange()
+              && request.auth.uid in resource.data.members
+              && !(request.auth.uid in request.resource.data.members)
+              && resource.data.members.hasAll(request.resource.data.members)
+              && request.resource.data.members.size() == resource.data.members.size() - 1)
+        );
+      // Borrar el grupo: solo quien lo creó
+      allow delete: if signedIn() && resource.data.owner == request.auth.uid;
+
+      // Los ítems de la lista: solo los miembros del grupo
+      match /items/{itemId} {
+        // Cómo está el grupo AHORA (antes del cambio)
+        function isMember() {
+          return signedIn() && request.auth.uid in get(/databases/$(database)/documents/lists/$(listId)).data.members;
+        }
+        // Cómo va a quedar el grupo DESPUÉS del cambio. Hace falta al crear el grupo
+        // con los ingredientes de una receta: el grupo y sus ítems se guardan juntos
+        // (en un mismo lote) y con get() el grupo todavía "no existe".
+        function isMemberAfter() {
+          return signedIn() && request.auth.uid in getAfter(/databases/$(database)/documents/lists/$(listId)).data.members;
+        }
+        allow read, delete: if isMember();
+        allow update: if isMember() && validGroupItem(request.resource.data);
+        allow create: if isMemberAfter() && validGroupItem(request.resource.data);
+      }
     }
   }
 }

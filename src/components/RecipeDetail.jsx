@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Modal from './Modal';
 import AsyncButton from './AsyncButton';
 import Stepper from './Stepper';
-import { cleanStep, factor, fmtAmount, hasIn, matchOf, plural, tagColor } from '../lib/ingredients';
+import { cleanStep, factor, fmtAmount, inPantry, matchOf, plural, tagColor } from '../lib/ingredients';
 
 function RecipeDetail({ recipe, pantry, onClose, onEdit, onDelete, onAddMissing, onCook }) {
   return (
@@ -20,12 +20,15 @@ function Body({ recipe, pantry, onClose, onEdit, onDelete, onAddMissing, onCook 
   return (
     <div className="detail">
       <div className="detail-hero">
-        <div>
+        <div className="detail-hero-main">
+          {recipe.photo && <img className="detail-photo" src={`${recipe.photo}/preview`} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
+          <div>
           <h3 id="detail-title">{recipe.name}</h3>
           <p>
             {recipe.minutes} min. Tenés {m.owned.length} de {recipe.ingredients.length}.
             {recipe.cooked > 0 && ` La cocinaste ${plural(recipe.cooked, 'vez', 'veces')}.`}
           </p>
+          </div>
         </div>
         <button className="icon-btn" type="button" onClick={onClose} aria-label="Cerrar">✕</button>
       </div>
@@ -39,7 +42,7 @@ function Body({ recipe, pantry, onClose, onEdit, onDelete, onAddMissing, onCook 
           <h4>Ingredientes</h4>
           <ul className="check-list">
             {recipe.ingredients.map((i) => {
-              const ok = hasIn(pantry, i.name);
+              const ok = inPantry(pantry, i.name);
               return (
                 <li key={i.name}>
                   <span className={`dot ${ok ? 'ok' : 'no'}`} aria-label={ok ? 'Lo tenés' : 'Te falta'}>{ok ? '✓' : ''}</span>

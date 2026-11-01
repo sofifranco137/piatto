@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Stepper from './Stepper';
 import AsyncButton from './AsyncButton';
-import { cap, cleanStep, factor, fmtIng, hasIn, norm } from '../lib/ingredients';
+import { cap, cleanStep, factor, fmtIng, inPantry, pantryMatch } from '../lib/ingredients';
 
 // Detecta tiempos en un paso: "Cocinar 9 minutos" → un temporizador de 9 minutos
 const TIME_RE = /(\d+)\s*(minutos?|min|horas?|hs|segundos?|seg)\b/gi;
@@ -122,7 +122,8 @@ function CookMode({ recipe, pantry, startServings, onClose, onFinish }) {
   }
 
   const activeTimers = Object.entries(timers).filter(([, t]) => t.running || t.left === 0);
-  const inPantry = recipe.ingredients.filter((i) => hasIn(pantry, i.name));
+  // Los productos de la alacena que usa esta receta (sin repetir)
+  const usedFromPantry = [...new Map(recipe.ingredients.map((i) => pantryMatch(pantry, i.name)).filter(Boolean).map((p) => [p.id, p])).values()];
 
   let stage;
   if (step === 0) {
@@ -139,7 +140,7 @@ function CookMode({ recipe, pantry, startServings, onClose, onFinish }) {
               <label>
                 <input type="checkbox" checked={ready.has(k)} onChange={() => toggleIn(ready, setReady, k)} />
                 <span>{fmtIng(ing, f)}</span>
-                {!hasIn(pantry, ing.name) && <em>No está en tu alacena</em>}
+                {!inPantry(pantry, ing.name) && <em>No está en tu alacena</em>}
               </label>
             </li>
           ))}
@@ -168,15 +169,15 @@ function CookMode({ recipe, pantry, startServings, onClose, onFinish }) {
     stage = (
       <>
         <h2 className="cook-title">¿Cómo quedó la alacena?</h2>
-        {inPantry.length ? (
+        {usedFromPantry.length ? (
           <>
             <p className="cook-sub">Marcá lo que se terminó y lo sacamos de tu alacena.</p>
             <ul className="mise">
-              {inPantry.map((ing) => (
-                <li key={ing.name}>
+              {usedFromPantry.map((p) => (
+                <li key={p.id}>
                   <label>
-                    <input type="checkbox" checked={used.has(norm(ing.name))} onChange={() => toggleIn(used, setUsed, norm(ing.name))} />
-                    <span>{cap(ing.name)}</span>
+                    <input type="checkbox" checked={used.has(p.id)} onChange={() => toggleIn(used, setUsed, p.id)} />
+                    <span>{cap(p.name)}</span>
                   </label>
                 </li>
               ))}

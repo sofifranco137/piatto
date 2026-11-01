@@ -3,7 +3,7 @@ import RecipeCard from './RecipeCard';
 import AsyncButton from './AsyncButton';
 import { norm } from '../lib/ingredients';
 
-function RecipesPanel({ recipes, pantry, loading, onOpen, onNew, onCook, onAddMissing, onLoadExamples }) {
+function RecipesPanel({ recipes, pantry, loading, onOpen, onNew, onSearch, onCook, onAddMissing, onLoadExamples }) {
   const [query, setQuery] = useState('');
   const q = norm(query);
   const shown = recipes.filter((r) => !q || norm(r.name).includes(q) || r.ingredients.some((i) => norm(i.name).includes(q)));
@@ -15,9 +15,10 @@ function RecipesPanel({ recipes, pantry, loading, onOpen, onNew, onCook, onAddMi
     content = (
       <div className="empty">
         <strong>Tu recetario está vacío</strong>
-        Cargá tu primera receta con sus ingredientes, o empezá con algunas de ejemplo.
+        Cargá tu primera receta, buscá recetas ya armadas o empezá con algunas de ejemplo.
         <div className="hero-actions" style={{ marginTop: 0, justifyContent: 'center' }}>
           <button className="btn btn-primary" type="button" onClick={onNew}>Nueva receta</button>
+          <button className="btn btn-outline" type="button" onClick={onSearch}>Buscar recetas</button>
           <AsyncButton className="btn btn-outline" pendingLabel="Cargando…" onClick={onLoadExamples}>Cargar recetas de ejemplo</AsyncButton>
         </div>
       </div>
@@ -40,6 +41,7 @@ function RecipesPanel({ recipes, pantry, loading, onOpen, onNew, onCook, onAddMi
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M20 20l-4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
             <input type="search" placeholder="Buscar receta o ingrediente" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Buscar receta o ingrediente" />
           </label>
+          <button className="btn btn-outline" type="button" onClick={onSearch}>Buscar recetas</button>
           <button className="btn btn-primary" type="button" onClick={onNew}>Nueva receta</button>
         </div>
       </div>

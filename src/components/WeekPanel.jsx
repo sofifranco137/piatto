@@ -2,7 +2,7 @@ import { useState } from 'react';
 import AsyncButton from './AsyncButton';
 import { useToast } from './Toasts';
 import { friendlyError } from '../lib/errors';
-import { hasIn, norm, plural, tagColor } from '../lib/ingredients';
+import { hasIn, inPantry, norm, plural, tagColor } from '../lib/ingredients';
 
 export const DAYS = [['lun', 'Lunes'], ['mar', 'Martes'], ['mie', 'Miércoles'], ['jue', 'Jueves'], ['vie', 'Viernes'], ['sab', 'Sábado'], ['dom', 'Domingo']];
 
@@ -13,7 +13,7 @@ export function weekNeeds(days, recipes, pantry, list) {
     const r = recipes.find((x) => x.id === id);
     if (!r) return;
     meals++;
-    r.ingredients.filter((i) => !hasIn(pantry, i.name) && !hasIn(list, i.name)).forEach((i) => {
+    r.ingredients.filter((i) => !inPantry(pantry, i.name) && !hasIn(list, i.name)).forEach((i) => {
       const k = `${norm(i.name)}|${i.unit}`;
       const prev = acc.get(k);
       if (prev) { if (prev.qty != null && i.qty != null) prev.qty += i.qty; } else acc.set(k, { name: i.name, qty: i.qty, unit: i.unit });

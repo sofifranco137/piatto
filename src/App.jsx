@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Hero from './components/Hero';
 import RecipesPanel from './components/RecipesPanel';
 import RecipeForm from './components/RecipeForm';
 import RecipeDetail from './components/RecipeDetail';
 import PantryPanel from './components/PantryPanel';
-import ShoppingList from './components/ShoppingList';
+import ListsPanel from './components/ListsPanel';
+import ImportRecipe from './components/ImportRecipe';
+import { InviteDialog } from './components/GroupDialogs';
 import WeekPanel, { DAYS } from './components/WeekPanel';
 import CookMode from './components/CookMode';
 import SetupNotice from './components/SetupNotice';
@@ -14,11 +16,13 @@ import { isConfigured, signOutUser } from './firebase';
 import { useUser } from './hooks/useUser';
 import { useCollection } from './hooks/useCollection';
 import { usePlan } from './hooks/usePlan';
+import { useMyGroups } from './hooks/useGroups';
+import * as groupsApi from './services/groups';
 import * as api from './services/db';
 import { examples, bookFallback } from './data/examples';
 import { friendlyError } from './lib/errors';
 import logo from './assets/logo-piatto-claro.png';
-import { hasIn, matchOf, norm, plural } from './lib/ingredients';
+import { hasIn, matchOf, plural } from './lib/ingredients';
 
 const TABS = [
   ['recetas', 'Recetas', 'Recetas'],
@@ -49,13 +53,46 @@ function ConnectedApp({ user }) {
   const pantry = useCollection(uid, 'pantry', 'asc');
   const list = useCollection(uid, 'shopping', 'asc');
   const plan = usePlan(uid);
+  const groups = useMyGroups(uid);
 
   const [tab, setTab] = useState('recetas');
   const [editing, setEditing] = useState(null);   // null | 'new' | receta
   const [detailId, setDetailId] = useState(null);
   const [cooking, setCooking] = useState(null);   // { id, servings }
+  const [importing, setImporting] = useState(false);
+  const [activeList, setActiveList] = useState(null); // null = Mi lista, o el id de un grupo
+  const [justCreated, setJustCreated] = useState(null);
+  const [invite, setInvite] = useState(null);       // { group } o { error }
 
-  const loadError = recipes.error || pantry.error || list.error || plan.error;
+  // Invitación por link: piatto-ruddy.vercel.app/?grupo=ID
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('grupo');
+    if (!id) return;
+    window.history.replaceState(null, '', window.location.pathname); // limpia la dirección
+    groupsApi.getGroup(id)
+      .then((group) => {
+        if (!group) return setInvite({ error: 'El link no corresponde a ningún grupo, o el grupo ya se eliminó.' });
+        if (group.members.includes(uid)) { setTab('lista'); setActiveList(id); return null; }
+        return setInvite({ group });
+      })
+      .catch(() => setInvite({ error: 'No pudimos abrir la invitación. Pedile a quien te la mandó un link nuevo.' }));
+  }, [uid]);
+
+  // Si me quitan del grupo que estoy mirando (o quien lo creó lo elimina), el grupo
+  // deja de llegar en tiempo real: vuelvo a Mi lista y aviso qué pasó.
+  const lastGroup = useRef(null);
+  useEffect(() => {
+    const current = groups.data.find((g) => g.id === activeList);
+    if (current) { lastGroup.current = current; return; }
+    const last = lastGroup.current;
+    if (activeList && !groups.loading && last?.id === activeList) {
+      lastGroup.current = null;
+      setActiveList(null);
+      toast(`Ya no sos parte de “${last.name}”: quien creó el grupo te quitó o lo eliminó.`);
+    }
+  }, [groups.data, groups.loading, activeList, toast]);
+
+  const loadError = recipes.error || pantry.error || list.error || plan.error || groups.error;
   const detail = recipes.data.find((r) => r.id === detailId) || null;
   const cookRecipe = cooking && recipes.data.find((r) => r.id === cooking.id);
   const planned = DAYS.reduce((n, [k]) => n + (plan.days[k] || []).filter((id) => recipes.data.some((r) => r.id === id)).length, 0);
@@ -96,7 +133,7 @@ function ConnectedApp({ user }) {
 
   async function finishCooking({ used, toList }) {
     const r = cookRecipe;
-    const gone = pantry.data.filter((p) => used.has(norm(p.name)));
+    const gone = pantry.data.filter((p) => used.has(p.id)); // used tiene los ids de la alacena que se terminaron
     const forList = toList ? gone.filter((p) => !hasIn(list.data, p.name)).map((p) => ({ name: p.name, from: r.name })) : [];
     await api.finishCooking(uid, r.id, gone.map((p) => p.id), forList);
     setCooking(null);
@@ -143,6 +180,28 @@ function ConnectedApp({ user }) {
     toast(`Sumaste ${plural(items.length, 'ingrediente', 'ingredientes')} para la semana.`);
   }
 
+  /* ---------- Grupos ---------- */
+  async function createGroup(name, items) {
+    const id = await groupsApi.createGroup(user, name, items);
+    setActiveList(id);
+    setJustCreated(id);
+    toast(`Creaste “${name}”.`);
+  }
+
+  async function joinInvited() {
+    const g = invite.group;
+    await groupsApi.joinGroup(g.id, user);
+    setInvite(null);
+    setTab('lista');
+    setActiveList(g.id);
+    toast(`Te sumaste a “${g.name}”.`);
+  }
+
+  /* ---------- Recetas del buscador (TheMealDB) ---------- */
+  async function importRecipe(recipe) {
+    await api.addRecipe(uid, { ...recipe, tag: recipes.data.length });
+  }
+
   async function loadExamples() {
     await api.loadExamples(uid, examples);
     toast('Cargaste las recetas de ejemplo.');
@@ -182,7 +241,7 @@ function ConnectedApp({ user }) {
         {tab === 'recetas' && (
           <RecipesPanel
             recipes={recipes.data} pantry={pantry.data} loading={recipes.loading}
-            onOpen={setDetailId} onNew={() => setEditing('new')} onCook={(id) => startCooking(id)}
+            onOpen={setDetailId} onNew={() => setEditing('new')} onSearch={() => setImporting(true)} onCook={(id) => startCooking(id)}
             onAddMissing={addMissing} onLoadExamples={loadExamples}
           />
         )}
@@ -200,11 +259,15 @@ function ConnectedApp({ user }) {
           />
         )}
         {tab === 'lista' && (
-          <ShoppingList
-            list={list.data} loading={list.loading}
-            onAdd={(items) => api.addListItems(uid, items)}
-            onToggle={(item) => api.setListItemChecked(uid, item.id, !item.checked)}
-            onDelete={removeListItem} onMoveBought={moveBought} onClear={clearList}
+          <ListsPanel
+            user={user} groups={groups} active={activeList} setActive={setActiveList}
+            recipes={recipes.data} onCreateGroup={createGroup} justCreated={justCreated}
+            personal={{
+              list: list.data, loading: list.loading,
+              onAdd: (items) => api.addListItems(uid, items),
+              onToggle: (item) => api.setListItemChecked(uid, item.id, !item.checked),
+              onDelete: removeListItem, onMoveBought: moveBought, onClear: clearList,
+            }}
           />
         )}
       </main>
@@ -221,6 +284,11 @@ function ConnectedApp({ user }) {
         onEdit={(r) => { setDetailId(null); setEditing(r); }}
         onDelete={deleteRecipe} onAddMissing={addMissing} onCook={startCooking}
       />
+      <ImportRecipe
+        open={importing} onClose={() => setImporting(false)} onImport={importRecipe}
+        existingNames={recipes.data.map((r) => r.name)}
+      />
+      <InviteDialog invite={invite} onClose={() => setInvite(null)} onJoin={joinInvited} />
       {cookRecipe && (
         <CookMode
           key={cookRecipe.id} recipe={cookRecipe} pantry={pantry.data} startServings={cooking.servings}

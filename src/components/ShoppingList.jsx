@@ -45,10 +45,9 @@ function ShoppingList({ list, loading, onAdd, onToggle, onDelete, onMoveBought, 
   const bought = list.filter((i) => i.checked);
 
   return (
-    <section className="panel" role="tabpanel">
-      <div className="list-paper">
+    <div className="list-paper">
         <div className="list-head">
-          <h2>Lista del súper</h2>
+          <h2>Mi lista</h2>
           <form className="inline-form" onSubmit={submit} noValidate>
             <input type="text" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Agregar algo a mano. Ej: 1 kg yerba" aria-label="Agregar a la lista" aria-invalid={!!error} autoComplete="off" />
             <button className="btn btn-primary" type="submit" disabled={saving}>{saving ? <span className="spinner" /> : 'Agregar'}</button>
@@ -95,8 +94,7 @@ function ShoppingList({ list, loading, onAdd, onToggle, onDelete, onMoveBought, 
             <AsyncButton className="btn btn-text" pendingLabel="Vaciando…" onClick={onClear}>Vaciar lista</AsyncButton>
           </div>
         )}
-      </div>
-    </section>
+    </div>
   );
 }
 

@@ -715,3 +715,20 @@ input, textarea { font: inherit; color: inherit; }
 }
 .auth-tabs button { white-space: nowrap; }
 @media (max-width: 420px) { .auth-tabs button { padding-inline: .4rem; font-size: .9rem; } }
+
+/* ============ v3: buscar recetas ============ */
+.sheet-import { width: min(640px, calc(100vw - 2rem)); }
+.import-results { display: grid; gap: .6rem; max-height: min(55vh, 460px); overflow-y: auto; padding-right: .2rem; }
+.import-card { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: .9rem; align-items: center; padding: .5rem; border-radius: 14px; background: var(--surface-2); }
+.import-card img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; background: var(--line); }
+.import-card h4 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 1.05rem; line-height: 1.2; }
+.import-original { font-size: .78rem; color: var(--muted); margin-top: .15rem; }
+.import-credit { font-size: .78rem; color: var(--muted); }
+.detail-photo { width: 76px; height: 76px; border-radius: 14px; object-fit: cover; flex: none; box-shadow: 0 6px 16px -8px rgba(0,0,0,.4); }
+.detail-hero-main { display: flex; gap: 1rem; align-items: center; }
+@media (max-width: 620px) {
+  .import-card { grid-template-columns: 52px minmax(0, 1fr); }
+  .import-card img { width: 52px; height: 52px; }
+  .import-card .btn { grid-column: 1 / -1; }
+}
+.sheet .inline-form { display: flex; }

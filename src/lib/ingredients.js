@@ -9,8 +9,18 @@ const UNITS = ['kg', 'g', 'gr', 'l', 'ml', 'cc', 'taza', 'tazas', 'cda', 'cdas',
 export const TAGS = ['#F7D654', '#B8D8B5', '#F7AE9E', '#F6CDB3', '#F5BCCD', '#D6CBF3', '#BFE3D4'];
 export const tagColor = (tag) => TAGS[(tag ?? 0) % TAGS.length];
 
+// Pasa una palabra a singular: "tomates" → "tomate", "limones" → "limon", "nueces" → "nuez"
+function singular(w) {
+  if (w.length <= 3) return w;
+  if (w.endsWith('ces')) return `${w.slice(0, -3)}z`;
+  if (w.endsWith('es') && /[lnrdjy]$/.test(w.slice(0, -2))) return w.slice(0, -2);
+  if (w.endsWith('s')) return w.slice(0, -1);
+  return w;
+}
+
 // "Huevos" y "huevo" cuentan como lo mismo; también ignora tildes y mayúsculas
-export const norm = (s) => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().replace(/(es|s)$/, '');
+export const norm = (s) => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+  .split(/\s+/).map(singular).join(' ');
 
 export const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 export const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -73,9 +83,18 @@ export function sectionOf(name) {
 
 export const hasIn = (list, name) => list.some((x) => norm(x.name) === norm(name));
 
+// ¿Este ingrediente lo tengo? Cuenta igual si el ingrediente es más específico que lo que cargué:
+// "aceite de oliva virgen extra" lo tengo si en la alacena hay "aceite"
+export function pantryMatch(pantry, ingredientName) {
+  const n = norm(ingredientName);
+  const first = n.split(' ')[0];
+  return pantry.find((p) => { const pn = norm(p.name); return pn === n || pn === first; }) || null;
+}
+export const inPantry = (pantry, ingredientName) => !!pantryMatch(pantry, ingredientName);
+
 // Cuánto de una receta tenés en la alacena
 export function matchOf(recipe, pantry) {
-  const owned = recipe.ingredients.filter((i) => hasIn(pantry, i.name));
-  const missing = recipe.ingredients.filter((i) => !hasIn(pantry, i.name));
+  const owned = recipe.ingredients.filter((i) => inPantry(pantry, i.name));
+  const missing = recipe.ingredients.filter((i) => !inPantry(pantry, i.name));
   return { owned, missing, pct: Math.round((owned.length / recipe.ingredients.length) * 100) };
 }

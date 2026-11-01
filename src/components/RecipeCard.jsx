@@ -1,5 +1,5 @@
 import AsyncButton from './AsyncButton';
-import { matchOf, plural, tagColor, hasIn } from '../lib/ingredients';
+import { matchOf, plural, tagColor, inPantry } from '../lib/ingredients';
 
 function RecipeCard({ recipe, pantry, onOpen, onCook, onAddMissing }) {
   const m = matchOf(recipe, pantry);
@@ -17,7 +17,7 @@ function RecipeCard({ recipe, pantry, onOpen, onCook, onAddMissing }) {
           </span>
           <span className="recipe-ings">
             {recipe.ingredients.slice(0, 6).map((i) => (
-              <span key={i.name} className={`mini-chip ${hasIn(pantry, i.name) ? 'have' : ''}`}>{i.name}</span>
+              <span key={i.name} className={`mini-chip ${inPantry(pantry, i.name) ? 'have' : ''}`}>{i.name}</span>
             ))}
             {extra > 0 && <span className="mini-chip">+{extra}</span>}
           </span>
