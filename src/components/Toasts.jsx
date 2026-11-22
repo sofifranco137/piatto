@@ -8,16 +8,17 @@ export const useToast = () => useContext(ToastContext);
 // toast('Guardado')                       → mensaje de éxito
 // toast('Algo falló', 'error')            → mensaje de error
 // toast('Eliminaste X', { undo: fn })     → con botón "Deshacer"
+// toast('Listo', { action: { label: 'Ver', run: fn } }) → con otro botón
 function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
 
   const remove = useCallback((id) => setToasts((t) => t.filter((x) => x.id !== id)), []);
 
   const toast = useCallback((message, opts = {}) => {
-    const { type = 'ok', undo } = typeof opts === 'string' ? { type: opts } : opts;
+    const { type = 'ok', undo, action } = typeof opts === 'string' ? { type: opts } : opts;
     const id = Math.random().toString(36).slice(2);
-    setToasts((t) => [...t, { id, message, type, undo }]);
-    setTimeout(() => remove(id), undo ? 6000 : type === 'error' ? 5000 : 2800);
+    setToasts((t) => [...t, { id, message, type, undo, action }]);
+    setTimeout(() => remove(id), action ? 8000 : undo ? 6000 : type === 'error' ? 5000 : 2800);
   }, [remove]);
 
   async function runUndo(t) {
@@ -38,6 +39,7 @@ function ToastProvider({ children }) {
           <div key={t.id} className={`toast ${t.type === 'error' ? 'error' : ''}`} role={t.type === 'error' ? 'alert' : undefined}>
             <span>{t.message}</span>
             {t.undo && <button type="button" onClick={() => runUndo(t)}>Deshacer</button>}
+            {t.action && <button type="button" onClick={() => { remove(t.id); t.action.run(); }}>{t.action.label}</button>}
           </div>
         ))}
       </div>

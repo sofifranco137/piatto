@@ -5,6 +5,8 @@ import RecipeForm from './components/RecipeForm';
 import RecipeDetail from './components/RecipeDetail';
 import PantryPanel from './components/PantryPanel';
 import ListsPanel from './components/ListsPanel';
+import SobremesaPanel from './components/SobremesaPanel';
+import { MomentDialog } from './components/MomentDialogs';
 import ImportRecipe from './components/ImportRecipe';
 import { InviteDialog } from './components/GroupDialogs';
 import WeekPanel, { DAYS } from './components/WeekPanel';
@@ -19,6 +21,7 @@ import { usePlan } from './hooks/usePlan';
 import { useMyGroups } from './hooks/useGroups';
 import * as groupsApi from './services/groups';
 import * as api from './services/db';
+import { addMoment, updateMoment } from './services/moments';
 import { examples, bookFallback } from './data/examples';
 import { friendlyError } from './lib/errors';
 import logo from './assets/logo-piatto-claro.png';
@@ -29,6 +32,7 @@ const TABS = [
   ['semana', 'Mi semana', 'Semana'],
   ['alacena', 'Mi alacena', 'Alacena'],
   ['lista', 'Lista del súper', 'Súper'],
+  ['sobremesa', 'Sobremesa', 'Sobremesa'],
 ];
 
 function App() {
@@ -63,6 +67,8 @@ function ConnectedApp({ user }) {
   const [activeList, setActiveList] = useState(null); // null = Mi lista, o el id de un grupo
   const [justCreated, setJustCreated] = useState(null);
   const [invite, setInvite] = useState(null);       // { group } o { error }
+  const [album, setAlbum] = useState(null);         // Sobremesa: null = Solo yo, o el id de un grupo
+  const [upload, setUpload] = useState(null);       // { album, recipeId } o { album, edit } mientras se sube o edita
 
   // Invitación por link: piatto-ruddy.vercel.app/?grupo=ID
   useEffect(() => {
@@ -92,6 +98,11 @@ function ConnectedApp({ user }) {
     }
   }, [groups.data, groups.loading, activeList, toast]);
 
+  // Si el grupo del álbum que estoy mirando deja de existir para mí, vuelvo a "Solo yo"
+  useEffect(() => {
+    if (album && !groups.loading && !groups.data.some((g) => g.id === album)) setAlbum(null);
+  }, [album, groups.data, groups.loading]);
+
   const loadError = recipes.error || pantry.error || list.error || plan.error || groups.error;
   const detail = recipes.data.find((r) => r.id === detailId) || null;
   const cookRecipe = cooking && recipes.data.find((r) => r.id === cooking.id);
@@ -101,6 +112,7 @@ function ConnectedApp({ user }) {
     semana: planned,
     alacena: pantry.data.length,
     lista: list.data.filter((i) => !i.checked).length,
+    sobremesa: null, // sin contador: así no se descargan todas las fotos al abrir la app
   };
 
   /* ---------- Recetas ---------- */
@@ -139,7 +151,8 @@ function ConnectedApp({ user }) {
     setCooking(null);
     toast(gone.length
       ? `¡Buen provecho! Sacaste ${plural(gone.length, 'ingrediente', 'ingredientes')} de la alacena${forList.length ? ' y los sumaste a la lista' : ''}.`
-      : '¡Buen provecho! Sumamos una vez más a esta receta.');
+      : '¡Buen provecho! Sumamos una vez más a esta receta.',
+    { action: { label: 'Subir una foto', run: () => openUpload(album, r.id) } });
   }
 
   /* ---------- Alacena ---------- */
@@ -181,11 +194,29 @@ function ConnectedApp({ user }) {
   }
 
   /* ---------- Grupos ---------- */
-  async function createGroup(name, items) {
+  // from = 'lista' o 'sobremesa': desde dónde se creó (la ventana para invitar la abre cada pestaña)
+  async function createGroup(name, items, from = 'lista') {
     const id = await groupsApi.createGroup(user, name, items);
-    setActiveList(id);
-    setJustCreated(id);
+    if (from === 'lista') { setActiveList(id); setJustCreated(id); }
     toast(`Creaste “${name}”.`);
+    return id;
+  }
+
+  /* ---------- Sobremesa ---------- */
+  function openUpload(albumId, recipeId = '') {
+    const valid = albumId && groups.data.some((g) => g.id === albumId) ? albumId : null;
+    setUpload({ album: valid, recipeId });
+  }
+
+  async function saveMoment(albumId, data, editId) {
+    if (editId) await updateMoment(uid, albumId, editId, data);                         // MODIFICAR
+    else await addMoment(uid, albumId, data);                                           // AGREGAR
+    setUpload(null);
+    setTab('sobremesa');
+    setAlbum(albumId);
+    const g = groups.data.find((x) => x.id === albumId);
+    toast(editId ? 'Guardaste los cambios.'
+      : g ? `Guardaste el momento en “${g.name}”.` : 'Guardaste el momento en tu álbum privado.');
   }
 
   async function joinInvited() {
@@ -228,7 +259,7 @@ function ConnectedApp({ user }) {
             {TABS.map(([key, label, short]) => (
               <button key={key} role="tab" className="tab" aria-selected={tab === key} onClick={() => setTab(key)}>
                 <span className="tl">{label}</span><span className="ts">{short}</span>
-                <span className="count">{counts[key]}</span>
+                {counts[key] != null && <span className="count">{counts[key]}</span>}
               </button>
             ))}
           </div>
@@ -270,6 +301,13 @@ function ConnectedApp({ user }) {
             }}
           />
         )}
+        {tab === 'sobremesa' && (
+          <SobremesaPanel
+            user={user} groups={groups} album={album} setAlbum={setAlbum} recipes={recipes.data}
+            onUpload={(albumId) => openUpload(albumId)} onEdit={(albumId, m) => setUpload({ album: albumId, edit: m })}
+            onCreateGroup={createGroup}
+          />
+        )}
       </main>
 
       <footer className="foot">Piatto. Hecho para el TP2 de Desarrollo Frontend II.</footer>
@@ -287,6 +325,10 @@ function ConnectedApp({ user }) {
       <ImportRecipe
         open={importing} onClose={() => setImporting(false)} onImport={importRecipe}
         existingNames={recipes.data.map((r) => r.name)}
+      />
+      <MomentDialog
+        preset={upload} recipes={recipes.data} groups={groups.data} myUid={uid}
+        onClose={() => setUpload(null)} onSave={saveMoment}
       />
       <InviteDialog invite={invite} onClose={() => setInvite(null)} onJoin={joinInvited} />
       {cookRecipe && (

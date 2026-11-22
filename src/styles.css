@@ -732,3 +732,107 @@ input, textarea { font: inherit; color: inherit; }
   .import-card .btn { grid-column: 1 / -1; }
 }
 .sheet .inline-form { display: flex; }
+
+/* =========================================================
+   v4: Sobremesa (álbum de fotos)
+   ========================================================= */
+.alert { display: grid; gap: .2rem; padding: 1rem 1.2rem; border-radius: 14px; background: color-mix(in srgb, var(--chili) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--chili) 35%, transparent); }
+.alert strong { font-weight: 700; }
+
+.album-head { display: flex; justify-content: space-between; align-items: end; gap: 1rem 2rem; flex-wrap: wrap; max-width: 1100px; margin: 0 auto 1.6rem; }
+.album-head h2 { font-size: clamp(1.8rem, 3vw, 2.4rem); }
+.album-note { text-align: center; margin: 1.5rem auto 0; }
+
+/* Las fotos como polaroids pegadas con cinta, un poco torcidas */
+.album { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 2rem 1.6rem; max-width: 1100px; margin: 0 auto; padding-top: .6rem; }
+.polaroid {
+  --tilt: 0deg;
+  position: relative; margin: 0; background: #FFFDF8; padding: .7rem .7rem 0; border-radius: 4px;
+  box-shadow: 0 1px 0 rgba(43,26,29,.08), 0 14px 28px -14px rgba(110,24,40,.45);
+  transform: rotate(var(--tilt)); transition: transform .25s ease, box-shadow .25s ease;
+}
+.polaroid::before { /* la cinta */
+  content: ""; position: absolute; top: -12px; left: 50%; width: 84px; height: 24px; translate: -50% 0; rotate: -3deg;
+  background: color-mix(in srgb, var(--butter) 55%, transparent); border-radius: 2px; box-shadow: 0 1px 2px rgba(0,0,0,.08);
+}
+.polaroid:nth-child(3n)::before { background: color-mix(in srgb, var(--sage) 60%, transparent); rotate: 4deg; }
+.polaroid:nth-child(3n+1)::before { background: color-mix(in srgb, var(--sky) 70%, transparent); }
+.polaroid:hover { transform: rotate(0deg) translateY(-4px); box-shadow: 0 1px 0 rgba(43,26,29,.08), 0 22px 36px -16px rgba(110,24,40,.55); }
+.polaroid-open { all: unset; display: block; cursor: zoom-in; border-radius: 2px; }
+.polaroid-open:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.polaroid img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 2px; background: #EEE6D8; }
+.polaroid figcaption { display: grid; gap: .1rem; padding: .7rem .2rem .9rem; color: var(--ink-fixed); }
+.polaroid figcaption strong { font-family: var(--serif); font-weight: 400; font-size: 1.15rem; line-height: 1.2; }
+.polaroid figcaption span { font-size: .92rem; }
+.polaroid figcaption small { font-size: .8rem; color: #7A6662; }
+.polaroid-skeleton { height: 360px; border-radius: 4px; }
+
+/* Elegir la foto */
+.photo-drop {
+  position: relative; display: grid; place-items: center; min-height: 170px; border-radius: 14px; cursor: pointer; overflow: hidden;
+  border: 2px dashed var(--line); background: var(--surface-2); font-weight: 400; text-align: center;
+}
+.photo-drop:hover, .photo-drop:focus-within { border-color: var(--cherry); }
+.photo-drop:focus-within { outline: 3px solid var(--focus); outline-offset: 1px; }
+.photo-drop[aria-invalid="true"] { border-color: var(--chili); }
+.photo-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.photo-drop-msg { display: grid; gap: .2rem; color: var(--muted); padding: 1rem; }
+.photo-drop-msg strong { color: var(--text); font-size: 1.05rem; }
+.photo-drop-msg .spinner { justify-self: center; width: 1.4em; height: 1.4em; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; margin-bottom: .3rem; }
+.photo-drop.has-photo { border-style: solid; padding: 0; }
+.photo-drop img { width: 100%; max-height: 280px; object-fit: contain; display: block; background: #1C1415; }
+.photo-drop-change { position: absolute; right: .6rem; bottom: .6rem; background: rgba(28,20,21,.78); color: #fff; font-size: .82rem; font-weight: 600; padding: .3rem .7rem; border-radius: 999px; pointer-events: none; }
+
+/* Ver la foto grande */
+.sheet-photo { width: min(760px, calc(100vw - 2rem)); }
+.viewer-img { width: 100%; height: auto; max-height: 68vh; object-fit: contain; border-radius: 10px; background: #1C1415; }
+.viewer-info { display: grid; gap: .3rem; }
+.viewer-info p { margin: 0; }
+.viewer-caption { font-family: var(--serif); font-size: 1.15rem; }
+
+@media (max-width: 620px) {
+  .album { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.4rem .9rem; }
+  .polaroid { padding: .45rem .45rem 0; }
+  .polaroid::before { width: 56px; height: 18px; top: -9px; }
+  .polaroid figcaption { padding: .5rem .1rem .6rem; }
+  .polaroid figcaption strong { font-size: .98rem; }
+  .polaroid figcaption span, .polaroid figcaption small { font-size: .78rem; }
+  .polaroid-skeleton { height: 240px; }
+  .album-head .panel-tools { width: 100%; }
+  .album-head .panel-tools .btn { flex: 1; }
+}
+.list-bar.wide { max-width: 1100px; }
+
+/* v4: hasta 3 fotos por momento */
+.list-switch { scrollbar-width: thin; }
+.photo-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; }
+.photo-slots[aria-invalid="true"] .photo-slot.add { border-color: var(--chili); }
+.photo-slot { position: relative; aspect-ratio: 4 / 5; border-radius: 12px; overflow: hidden; background: #1C1415; font-weight: 400; }
+.photo-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-slot.add { display: grid; place-items: center; text-align: center; cursor: pointer; background: var(--surface-2); border: 2px dashed var(--line); }
+.photo-slot.add:hover, .photo-slot.add:focus-within { border-color: var(--cherry); }
+.photo-slot.add:focus-within { outline: 3px solid var(--focus); outline-offset: 1px; }
+.photo-slot.add input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.photo-slot.add .photo-drop-msg { font-size: .85rem; padding: .5rem; }
+.slot-tag { position: absolute; left: .4rem; bottom: .4rem; font-size: .72rem; font-weight: 700; padding: .2rem .5rem; border-radius: 999px; background: var(--butter); color: var(--ink-fixed); border: 0; }
+.slot-tag.as-btn { background: rgba(28,20,21,.78); color: #fff; cursor: pointer; }
+.slot-tag.as-btn:hover { background: var(--ink-fixed); }
+.slot-remove { position: absolute; top: .35rem; right: .35rem; width: 1.8rem; height: 1.8rem; border-radius: 50%; border: 0; background: rgba(28,20,21,.78); color: #fff; font-size: .8rem; cursor: pointer; }
+.slot-remove:hover { background: var(--chili); }
+
+/* Momento con varias fotos: una pila detrás de la polaroid */
+.polaroid.stack { box-shadow: 6px 6px 0 -1px #F4EDE0, 6px 6px 0 0 rgba(43,26,29,.12), 0 14px 28px -14px rgba(110,24,40,.45); }
+.polaroid-open { position: relative; }
+.photo-count { position: absolute; right: .5rem; top: .5rem; font-size: .75rem; font-weight: 700; padding: .2rem .55rem; border-radius: 999px; background: rgba(28,20,21,.78); color: #fff; }
+
+/* Pasar las fotos en el visor */
+.viewer-stage { position: relative; }
+.viewer-arrow { position: absolute; top: 50%; translate: 0 -50%; width: 2.6rem; height: 2.6rem; border-radius: 50%; border: 0; background: rgba(255,253,248,.9); color: var(--ink-fixed); font-size: 1.6rem; line-height: 1; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+.viewer-arrow:hover { background: #fff; }
+.viewer-arrow.prev { left: .7rem; } .viewer-arrow.next { right: .7rem; }
+.viewer-dots { position: absolute; left: 50%; bottom: .8rem; translate: -50% 0; display: flex; gap: .4rem; }
+.viewer-dots button { width: .6rem; height: .6rem; border-radius: 50%; border: 0; padding: 0; background: rgba(255,255,255,.55); cursor: pointer; }
+.viewer-dots button[aria-current="true"] { background: #fff; }
+@media (max-width: 620px) { .photo-slot.add .photo-drop-msg strong { font-size: .9rem; } }
+.slot-tag { white-space: nowrap; }
+@media (max-width: 620px) { .slot-tag { font-size: .64rem; padding: .18rem .42rem; left: .3rem; bottom: .3rem; } }

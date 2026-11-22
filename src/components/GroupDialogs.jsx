@@ -45,7 +45,7 @@ function NewGroupBody({ recipes, onClose, onCreate }) {
         <h3 id="new-group-title">Nuevo grupo</h3>
         <button type="button" className="icon-btn" onClick={onClose} aria-label="Cerrar">✕</button>
       </div>
-      <p className="muted">Para una juntada, un viaje o cualquier compra entre varios. Creás el grupo, mandás el link y quien lo abra se suma a la lista.</p>
+      <p className="muted">Para una juntada, un viaje o cualquier compra entre varios. Creás el grupo, mandás el link y quien lo abra se suma a la lista y a las fotos de Sobremesa.</p>
       <label className="field">Nombre del grupo
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ej: Pizza en lo de Lu" aria-invalid={!!error} autoFocus />
         <span className="field-error">{error}</span>
@@ -73,7 +73,7 @@ function NewGroupBody({ recipes, onClose, onCreate }) {
 export function ShareDialog({ group, justCreated, onClose }) {
   const toast = useToast();
   const link = group ? inviteLink(group.id) : '';
-  const message = group ? `Sumate a la lista “${group.name}” en Piatto: ${link}` : '';
+  const message = group ? `Sumate a “${group.name}” en Piatto: ${link}` : '';
 
   async function copy() {
     try { await navigator.clipboard.writeText(link); toast('Copiaste el link.'); }
@@ -91,7 +91,7 @@ export function ShareDialog({ group, justCreated, onClose }) {
             <h3 id="share-title">{justCreated ? `Invitá a ${group.name}` : `Compartir ${group.name}`}</h3>
             <button type="button" className="icon-btn" onClick={onClose} aria-label="Cerrar">✕</button>
           </div>
-          <p className="muted">Mandá este link a quien quieras. Al abrirlo inicia sesión en Piatto y se suma a la lista; los cambios aparecen al instante para todos.</p>
+          <p className="muted">Mandá este link a quien quieras. Al abrirlo inicia sesión en Piatto y se suma a la lista y a las fotos del grupo; los cambios aparecen al instante para todos.</p>
           <div className="share-link">
             <input type="text" readOnly value={link} onFocus={(e) => e.target.select()} aria-label="Link de invitación" />
             <button className="btn btn-primary" type="button" onClick={copy}>Copiar link</button>
@@ -146,7 +146,7 @@ function MembersBody({ group, items, myUid, onClose, onRemove, onLeave, onDelete
           {isOwner && !confirmDelete && <button className="btn btn-text danger" type="button" onClick={() => setConfirmDelete(true)}>Eliminar grupo</button>}
           {isOwner && confirmDelete && (
             <>
-              <AsyncButton className="btn btn-text danger-solid" pendingLabel="Eliminando…" onClick={onDelete}>Sí, eliminar el grupo</AsyncButton>
+              <AsyncButton className="btn btn-text danger-solid" pendingLabel="Eliminando…" onClick={onDelete}>Sí, eliminar el grupo y sus fotos</AsyncButton>
               <button className="btn btn-text" type="button" onClick={() => setConfirmDelete(false)}>No</button>
             </>
           )}
@@ -173,9 +173,9 @@ export function InviteDialog({ invite, onClose, onJoin }) {
           ) : (
             <>
               <p className="muted">
-                Es una lista del súper compartida con {plural(invite.group.members.length, 'persona', 'personas')}
-                {invite.group.names?.[invite.group.owner] ? `; la creó ${invite.group.names[invite.group.owner]}` : ''}.
-                Si te sumás, vas a ver la lista y podrás elegir qué traés.
+                Es un grupo de {plural(invite.group.members.length, 'persona', 'personas')}
+                {invite.group.names?.[invite.group.owner] ? `; lo creó ${invite.group.names[invite.group.owner]}` : ''}.
+                Si te sumás, vas a ver la lista del súper, podrás elegir qué traés y ver y subir las fotos de Sobremesa.
               </p>
               <div className="sheet-foot">
                 <button className="btn btn-text" type="button" onClick={onClose}>Ahora no</button>

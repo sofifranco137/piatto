@@ -5,7 +5,7 @@ Piatto conecta tus recetas, lo que hay en tu alacena y la lista del súper. Carg
 Trabajo Práctico 2 de Desarrollo Frontend II (UADE): React + Vite, Cloud Firestore y despliegue en Vercel.
 
 - **App publicada:** https://piatto-ruddy.vercel.app
-- **Versión actual:** v3.0
+- **Versión actual:** v4.0
 
 ## Qué hace
 
@@ -18,6 +18,7 @@ Trabajo Práctico 2 de Desarrollo Frontend II (UADE): React + Vite, Cloud Firest
 - **Deshacer:** al eliminar una receta, un ingrediente o un ítem de la lista, o al vaciarla, aparece un botón para deshacerlo.
 - **Buscar recetas:** busca recetas ya armadas en TheMealDB (en español: la búsqueda se traduce al inglés y la receta al español con MyMemory) y las guarda en el recetario.
 - **Grupos:** listas del súper compartidas para una juntada o un viaje. Se invita con un link; cada ítem puede tener quién lo trae; los cambios se ven al instante para todos; quien creó el grupo puede quitar personas o eliminarlo.
+- **Sobremesa:** un álbum de fotos de la gente con la que compartiste lo que cocinaste. Cada momento tiene hasta 3 fotos (la primera es la portada) y guarda con quién, qué receta, la fecha y un recuerdo. Se puede editar después: cambiar, agregar o sacar fotos y corregir los datos. Hay un álbum privado (“Solo yo”) y uno por cada grupo, que ven solo sus miembros. Al terminar el modo cocina, el aviso ofrece subir una foto.
 - **Cuenta propia:** registro e inicio de sesión con correo y contraseña o con Google, cierre de sesión y recuperar la contraseña por correo.
 - Validaciones en los formularios, estados de carga y mensajes de éxito o error. Funciona en computadora y en celular.
 
@@ -59,6 +60,8 @@ La app queda en http://localhost:5173. Si cambiás el `.env`, reiniciá `npm run
 | `src/firebase.js` | Inicializa Firebase con las variables del `.env`, exporta `auth` y `db`, y tiene las funciones de registro, inicio de sesión, cierre de sesión y recuperar contraseña. |
 | `src/services/db.js` | Las operaciones con Firestore de los datos personales: consultar (`onSnapshot`), agregar (`addDoc`, `writeBatch`), modificar (`updateDoc`) y eliminar (`deleteDoc`). |
 | `src/services/groups.js` | Las operaciones de los grupos: crear, sumarse con el link, asignar, tachar, quitar personas y escuchar los cambios de los demás en tiempo real. |
+| `src/services/moments.js` | Las fotos de Sobremesa: consultar en tiempo real, agregar y eliminar, en el álbum privado o en el de un grupo. |
+| `src/lib/photos.js` | Achica y comprime cada foto en el navegador antes de guardarla. |
 | `src/services/recipesApi.js` | Las APIs externas: buscar en TheMealDB y traducir con MyMemory. |
 | `src/hooks/useCollection.js` | Hook que trae una colección y la mantiene actualizada en tiempo real. |
 | `src/App.jsx` | Usa esos datos y conecta los botones de la interfaz con las funciones de `db.js`. |
@@ -72,7 +75,11 @@ users/{uid}/shopping/{id}  name, qty, unit, from, checked, createdAt
 users/{uid}/plan/semana    days: { lun: [idsDeRecetas], mar: [...], ... }, updatedAt
 lists/{grupoId}            name, owner, members[], names{uid: nombre}, createdAt
 lists/{grupoId}/items/{id} name, qty, unit, from, checked, assignee, addedBy, checkedBy, createdAt
+users/{uid}/moments/{id}   photos[{src, width, height}], recipeId, recipeName, people, caption, date, addedBy, createdAt
+lists/{grupoId}/moments/{id}  (los mismos campos: las fotos del álbum del grupo)
 ```
+
+**Por qué las fotos se guardan en Firestore y no en Firebase Storage:** Storage ahora exige el plan pago (Blaze), que pide tarjeta. Para seguir en el plan gratuito (Spark), la app achica cada foto en el navegador (hasta 1280 px, JPEG, menos de 300.000 caracteres) y la guarda como texto (data URL) en un documento de Firestore, que admite hasta 1 MB: por eso entran hasta 3 fotos por momento. Las reglas limitan el tamaño y controlan quién puede verla.
 
 Cada persona crea su cuenta con correo y contraseña. Sus datos se guardan bajo su `uid`, así que ve lo mismo desde cualquier dispositivo, y nadie más puede leerlos (ver `firestore.rules`).
 
@@ -96,13 +103,14 @@ Las reglas de Firestore se publican en Firebase: desplegar en Vercel no las actu
 src/
   App.jsx              pantalla principal y acciones
   firebase.js          conexión con Firebase
-  services/db.js       operaciones con Firestore
-  hooks/               useUser (sesión), useCollection y usePlan (datos en tiempo real), useBookTilt (libro 3D)
+  services/            db.js (datos personales), groups.js (grupos), moments.js (fotos), recipesApi.js (APIs externas)
+  hooks/               useUser (sesión), useCollection, usePlan, useGroups y useMoments (datos en tiempo real), useBookTilt (libro 3D)
   components/          AuthScreen (ingreso), Hero, Book, CookMode (modo cocina), WeekPanel (semana), Stepper,
-                       ListsPanel, GroupList, GroupDialogs, Avatar (grupos), ImportRecipe (buscador), RecipesPanel, RecipeCard, RecipeForm, RecipeDetail,
+                       ListsPanel, GroupList, GroupDialogs, Avatar (grupos), SobremesaPanel, MomentDialogs (fotos), ImportRecipe (buscador), RecipesPanel, RecipeCard, RecipeForm, RecipeDetail,
                        PantryPanel, ShoppingList, Modal, AsyncButton, Toasts, SetupNotice
   lib/ingredients.js   leer “200 g harina”, comparar ingredientes, calcular coincidencias
   lib/errors.js        mensajes de error claros
+  lib/photos.js        achicar y comprimir fotos
   data/examples.js     recetas de ejemplo para la primera vez
   styles.css           estilos
 firestore.rules        reglas de seguridad de Firestore
@@ -115,3 +123,4 @@ firestore.rules        reglas de seguridad de Firestore
 | v1.0 | Recetas, alacena con “qué podés cocinar” y lista del súper, guardados en Firestore. Inicio de sesión con correo o Google. |
 | v2.0 | Modo “A cocinar”, porciones, plan semanal, lista por secciones del súper y deshacer. |
 | v3.0 | Grupos con lista compartida, invitación por link, quién trae qué y cambios en tiempo real. Buscador de recetas con TheMealDB y traducción con MyMemory. |
+| v4.0 | Sobremesa: álbum de fotos privado y por grupo, con quién compartiste cada comida, hasta 3 fotos por momento y edición. Subir una foto al terminar el modo cocina. |

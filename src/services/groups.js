@@ -4,6 +4,7 @@
      lists/{grupoId}              → name, owner, members[], names{}, createdAt
      lists/{grupoId}/items/{id}   → name, qty, unit, from, checked, assignee,
                                     addedBy, checkedBy, createdAt
+     lists/{grupoId}/moments/{id} → las fotos de Sobremesa del grupo (ver moments.js)
    Las reglas de Firestore dejan leer y escribir solo a quienes
    están en members (ver firestore.rules).
    ========================================================= */
@@ -118,11 +119,15 @@ export function leaveGroup(groupId, uid, items) {
   return batch.commit();
 }
 
-// Borrar el grupo entero: primero sus ítems y después el grupo
+// Borrar el grupo entero: primero sus ítems y sus fotos de Sobremesa, y después el grupo
 export async function deleteGroup(groupId) {
-  const items = await getDocs(itemsCol(groupId));
+  const [items, moments] = await Promise.all([
+    getDocs(itemsCol(groupId)),
+    getDocs(collection(db, 'lists', groupId, 'moments')),
+  ]);
   const batch = writeBatch(db);
   items.docs.forEach((d) => batch.delete(d.ref));
+  moments.docs.forEach((d) => batch.delete(d.ref));
   batch.delete(groupRef(groupId));
   return batch.commit();
 }
