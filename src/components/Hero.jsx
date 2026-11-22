@@ -1,16 +1,15 @@
 import { useRef } from 'react';
 import Book from './Book';
+import ProfileMenu from './ProfileMenu';
 import { useBookTilt } from '../hooks/useBookTilt';
 import logo from '../assets/logo-piatto-claro.png';
 
 const LINKS = [['recetas', 'Recetas'], ['semana', 'Mi semana'], ['alacena', 'Mi alacena'], ['lista', 'Lista del súper'], ['sobremesa', 'Sobremesa']];
 
-// Banner de la app con el recetario 3D, el menú y el nombre de quien inició sesión
-function Hero({ recipes, user, onGo, onNewRecipe, onSignOut }) {
+// Banner de la app con el recetario 3D, el menú y la foto de perfil de quien inició sesión
+function Hero({ recipes, user, photo, onSavePhoto, onRemovePhoto, onGo, onNewRecipe, onSignOut }) {
   const heroRef = useRef(null);
   useBookTilt(heroRef);
-
-  const firstName = (user?.displayName || user?.email?.split('@')[0] || '').split(' ')[0];
 
   return (
     <header className="hero" ref={heroRef}>
@@ -23,10 +22,7 @@ function Hero({ recipes, user, onGo, onNewRecipe, onSignOut }) {
           <div className="topbar-links">
             {LINKS.map(([key, label]) => <a key={key} href="#app" onClick={() => onGo(key)}>{label}</a>)}
           </div>
-          <div className="user-chip">
-            <span>Hola, {firstName}</span>
-            <button className="btn btn-small btn-ghost-light" type="button" onClick={onSignOut}>Cerrar sesión</button>
-          </div>
+          <ProfileMenu user={user} photo={photo} onSave={onSavePhoto} onRemove={onRemovePhoto} onSignOut={onSignOut} />
         </div>
       </nav>
 

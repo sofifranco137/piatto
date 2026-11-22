@@ -19,6 +19,8 @@ import { useUser } from './hooks/useUser';
 import { useCollection } from './hooks/useCollection';
 import { usePlan } from './hooks/usePlan';
 import { useMyGroups } from './hooks/useGroups';
+import { useProfile } from './hooks/useProfile';
+import { removeProfilePhoto, saveProfilePhoto } from './services/profile';
 import * as groupsApi from './services/groups';
 import * as api from './services/db';
 import { addMoment, updateMoment } from './services/moments';
@@ -58,6 +60,7 @@ function ConnectedApp({ user }) {
   const list = useCollection(uid, 'shopping', 'asc');
   const plan = usePlan(uid);
   const groups = useMyGroups(uid);
+  const profile = useProfile(uid);   // la foto de perfil propia (si no hay, se usa la de Google)
 
   const [tab, setTab] = useState('recetas');
   const [editing, setEditing] = useState(null);   // null | 'new' | receta
@@ -250,6 +253,8 @@ function ConnectedApp({ user }) {
     <>
       <Hero
         recipes={recipes.data.length ? recipes.data : bookFallback} user={user}
+        photo={profile.data.photo || null}
+        onSavePhoto={(photo) => saveProfilePhoto(uid, photo)} onRemovePhoto={() => removeProfilePhoto(uid)}
         onGo={setTab} onNewRecipe={() => setEditing('new')} onSignOut={signOut}
       />
 

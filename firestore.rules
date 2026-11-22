@@ -71,6 +71,15 @@ service cloud.firestore {
       allow create, update: if isOwner(userId) && validMoment(request.resource.data);
     }
 
+    // Foto de perfil: un solo documento (users/{uid}/profile/main) con la foto cuadrada y chica
+    match /users/{userId}/profile/{id} {
+      allow read, delete: if isOwner(userId);
+      allow create, update: if isOwner(userId) && id == 'main'
+        && request.resource.data.photo is string
+        && request.resource.data.photo.size() > 100 && request.resource.data.photo.size() <= 150000
+        && request.resource.data.updatedAt is int;
+    }
+
     // Plan de la semana: un solo documento con un mapa { lun: [ids], mar: [...], ... }
     match /users/{userId}/plan/{id} {
       allow read, delete: if isOwner(userId);
